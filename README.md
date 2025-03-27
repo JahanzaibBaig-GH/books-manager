@@ -50,7 +50,6 @@ The API follows RESTful conventions and supports the following operations:
 
    ```
     npm install
-    Create a .env file in the root directory with your MongoDB connection string:
 
    ```
 
@@ -58,7 +57,7 @@ The API follows RESTful conventions and supports the following operations:
 
    ```
     MONGODB_URI=mongodb://localhost:27017/books-manager
-    PORT=3000
+    PORT=8000
 
    ```
 
