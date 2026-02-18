@@ -9,51 +9,54 @@ const asyncHandler = (fn) => (req, res, next) => {
 };
 
 /*================================
-* Create or Update a book
+* Create a book (POST)
 =================================*/
-const saveBook = asyncHandler(async (req, res, isUpdate) => {
-  if (isUpdate) {
-    const { _id, __v, ...updateData } = req.body;
-    req.body = updateData;
-  }
-
+const createBook = asyncHandler(async (req, res) => {
   const { error } = validateBook(req.body);
   if (error) {
     return res.status(400).json({ message: error.details[0].message });
   }
 
-  let book;
-  if (isUpdate) {
-    const existingBook = await Book.findById(req.params.id);
-
-    if (!existingBook) {
-      return res.status(404).json({ message: "Book not found" });
-    }
-
-    if (req.body.isbn && req.body.isbn !== existingBook.isbn) {
-      const isbnExists = await Book.findOne({
-        isbn: req.body.isbn,
-        _id: { $ne: req.params.id },
-      });
-
-      if (isbnExists) {
-        return res.status(409).json({ message: "ISBN already exists" });
-      }
-    }
-
-    book = await Book.findByIdAndUpdate(req.params.id, req.body, { new: true });
-  } else {
-    const existingBook = await Book.findOne({ isbn: req.body.isbn });
-
-    if (existingBook) {
-      return res.status(409).json({ message: "ISBN already exists" });
-    }
-
-    book = new Book(req.body);
-    await book.save();
+  const existingBook = await Book.findOne({ isbn: req.body.isbn });
+  if (existingBook) {
+    return res.status(409).json({ message: "ISBN already exists" });
   }
 
-  res.status(isUpdate ? 200 : 201).json(book);
+  const book = new Book(req.body);
+  await book.save();
+  res.status(201).json(book);
+});
+
+/*================================
+* Update a book by ID (PUT)
+=================================*/
+const updateBook = asyncHandler(async (req, res) => {
+  const { _id, __v, ...updateData } = req.body;
+
+  const { error } = validateBook(updateData);
+  if (error) {
+    return res.status(400).json({ message: error.details[0].message });
+  }
+
+  const existingBook = await Book.findById(req.params.id);
+  if (!existingBook) {
+    return res.status(404).json({ message: "Book not found" });
+  }
+
+  if (updateData.isbn && updateData.isbn !== existingBook.isbn) {
+    const isbnExists = await Book.findOne({
+      isbn: updateData.isbn,
+      _id: { $ne: req.params.id },
+    });
+    if (isbnExists) {
+      return res.status(409).json({ message: "ISBN already exists" });
+    }
+  }
+
+  const book = await Book.findByIdAndUpdate(req.params.id, updateData, {
+    new: true,
+  });
+  res.status(200).json(book);
 });
 
 /*================================
@@ -133,8 +136,8 @@ const deleteBook = asyncHandler(async (req, res) => {
 * Export handlers
 =================================*/
 module.exports = {
-  createBook: (req, res) => saveBook(req, res, false),
-  updateBook: (req, res) => saveBook(req, res, true),
+  createBook,
+  updateBook,
   getAllBooks,
   getBookById,
   deleteBook,
